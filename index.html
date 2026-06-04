@@ -791,7 +791,7 @@
         }
 
         // API Helper (通过 Cloudflare Worker 代理解决 CORS)
-        const API_PROXY = 'https://dnsneko-proxy.liw.workers.dev/proxy';
+        const API_PROXY = 'https://dns.liw.cc.cd/proxy';
 
         async function apiRequest(method, path, body = null) {
             if (!authUsername || !authApiKey) {
