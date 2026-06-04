@@ -1,0 +1,7 @@
+name = "dnsneko-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+routes = [
+  { pattern = "dns.liw.cc.cd/*", zone_name = "liw.cc.cd" }
+]
