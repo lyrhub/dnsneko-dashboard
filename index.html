@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNSNeko 管理面板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --radius: 8px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header h1 span {
+            font-size: 24px;
+        }
+
+        .auth-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .auth-status .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger);
+        }
+
+        .auth-status .dot.connected {
+            background: var(--success);
+        }
+
+        .auth-status span {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Auth Section */
+        .auth-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .auth-card h2 {
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .auth-form {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-group input, .form-group select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--primary);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: var(--danger-hover);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg);
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0;
+        }
+
+        .tab {
+            padding: 10px 16px;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab:hover {
+            color: var(--text);
+        }
+
+        /* Panels */
+        .panel {
+            display: none;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        /* Card */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .card-header h3 {
+            font-size: 15px;
+        }
+
+        /* Table */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        tr:hover {
+            background: var(--bg);
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 24px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal h3 {
+            margin-bottom: 16px;
+            font-size: 16px;
+        }
+
+        .modal .form-group {
+            margin-bottom: 12px;
+        }
+
+        .modal .form-group input,
+        .modal .form-group select {
+            width: 100%;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 300;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            font-size: 13px;
+            color: white;
+            animation: slideIn 0.3s ease;
+            max-width: 360px;
+        }
+
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+        .toast-info { background: var(--primary); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty state */
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Record actions */
+        .actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .auth-form {
+                flex-direction: column;
+            }
+            .form-group input {
+                width: 100%;
+            }
+            .container {
+                padding: 16px;
+            }
+        }
+
+        /* Checkbox */
+        .checkbox-cell {
+            width: 32px;
+        }
+
+        .checkbox-cell input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        /* Batch bar */
+        .batch-bar {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: #eef2ff;
+            border-radius: var(--radius);
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .batch-bar.show {
+            display: flex;
+        }
+
+        .batch-bar span {
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 16px;
+            font-size: 13px;
+        }
+
+        .pagination button {
+            padding: 6px 12px;
+        }
+
+        .page-info {
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1><span>🐱</span> DNSNeko 管理面板</h1>
+        <div class="auth-status">
+            <div class="dot" id="authDot"></div>
+            <span id="authText">未连接</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Auth Card -->
+        <div class="auth-card">
+            <h2>🔑 API 认证</h2>
+            <div class="auth-form">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="username" placeholder="输入用户名" />
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="password" id="apiKey" placeholder="输入 API Key" />
+                </div>
+                <button class="btn btn-primary" onclick="saveAuth()">保存并连接</button>
+                <button class="btn btn-outline" onclick="clearAuth()">清除</button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('domains')">域名管理</button>
+            <button class="tab" onclick="switchTab('records')">DNS 记录</button>
+            <button class="tab" onclick="switchTab('batch')">批量操作</button>
+        </div>
+
+        <!-- Domains Panel -->
+        <div class="panel active" id="panel-domains">
+            <div class="card">
+                <div class="card-header">
+                    <h3>域名列表</h3>
+                    <button class="btn btn-primary btn-sm" onclick="loadDomains()">刷新</button>
+                </div>
+                <div id="domainList">
+                    <div class="empty">请先配置 API 认证，然后点击刷新加载域名列表</div>
+                </div>
+                <div class="pagination" id="domainPagination" style="display:none;">
+                    <button class="btn btn-outline btn-sm" onclick="changeDomainPage(-1)">上一页</button>
+                    <span class="page-info" id="domainPageInfo"></span>
+                    <button class="btn btn-outline btn-sm" onclick="changeDomainPage(1)">下一页</button>
+                </div>
+            </div>
+
+            <!-- Domain Detail -->
+            <div class="card" id="domainDetailCard" style="display:none;">
+                <div class="card-header">
+                    <h3>域名详情</h3>
+                    <button class="btn btn-outline btn-sm" onclick="closeDomainDetail()">关闭</button>
+                </div>
+                <div id="domainDetail"></div>
+            </div>
+        </div>
+
+        <!-- Records Panel -->
+        <div class="panel" id="panel-records">
+            <div class="card">
+                <div class="card-header">
+                    <h3>DNS 记录管理</h3>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-primary btn-sm" onclick="showAddRecordModal()">添加记录</button>
+                        <button class="btn btn-outline btn-sm" onclick="loadRecords()">刷新</button>
+                    </div>
+                </div>
+
+                <!-- Domain selector -->
+                <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;">
+                    <div class="form-group">
+                        <label>选择域名</label>
+                        <select id="recordDomainSelect" onchange="onRecordDomainChange()">
+                            <option value="">-- 请选择域名 --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>记录类型</label>
+                        <select id="recordTypeFilter" onchange="loadRecords()">
+                            <option value="">全部</option>
+                            <option value="A">A</option>
+                            <option value="AAAA">AAAA</option>
+                            <option value="CNAME">CNAME</option>
+                            <option value="MX">MX</option>
+                            <option value="TXT">TXT</option>
+                            <option value="NS">NS</option>
+                            <option value="SRV">SRV</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>关键词</label>
+                        <input type="text" id="recordKeyword" placeholder="搜索" style="width:120px;" />
+                    </div>
+                    <button class="btn btn-outline btn-sm" onclick="loadRecords()">筛选</button>
+                </div>
+
+                <div id="recordList">
+                    <div class="empty">请先选择一个域名</div>
+                </div>
+                <div class="pagination" id="recordPagination" style="display:none;">
+                    <button class="btn btn-outline btn-sm" onclick="changeRecordPage(-1)">上一页</button>
+                    <span class="page-info" id="recordPageInfo"></span>
+                    <button class="btn btn-outline btn-sm" onclick="changeRecordPage(1)">下一页</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Panel -->
+        <div class="panel" id="panel-batch">
+            <div class="card">
+                <div class="card-header">
+                    <h3>批量操作</h3>
+                </div>
+                <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
+                    在 DNS 记录列表中勾选记录后，可在此执行批量操作。
+                </p>
+
+                <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;">
+                    <div class="form-group">
+                        <label>选择域名</label>
+                        <select id="batchDomainSelect" onchange="onBatchDomainChange()">
+                            <option value="">-- 请选择域名 --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Batch select records -->
+                <div id="batchRecordList">
+                    <div class="empty">请先选择一个域名</div>
+                </div>
+
+                <div class="batch-bar" id="batchBar">
+                    <span id="batchCount">0</span> 条记录已选中
+                    <button class="btn btn-primary btn-sm" onclick="batchStatus(1)">批量启用</button>
+                    <button class="btn btn-outline btn-sm" onclick="batchStatus(0)">批量暂停</button>
+                    <button class="btn btn-danger btn-sm" onclick="batchDelete()">批量删除</button>
+                    <button class="btn btn-outline btn-sm" onclick="showBatchTTLModal()">修改 TTL</button>
+                    <button class="btn btn-outline btn-sm" onclick="showBatchLineModal()">修改线路</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Record Modal -->
+    <div class="modal-overlay" id="recordModal">
+        <div class="modal">
+            <h3 id="recordModalTitle">添加 DNS 记录</h3>
+            <div class="form-group">
+                <label>主机记录 (Name)</label>
+                <input type="text" id="recordName" placeholder="如: www, @, mail" />
+            </div>
+            <div class="form-group">
+                <label>记录类型</label>
+                <select id="recordType">
+                    <option value="A">A</option>
+                    <option value="AAAA">AAAA</option>
+                    <option value="CNAME">CNAME</option>
+                    <option value="MX">MX</option>
+                    <option value="TXT">TXT</option>
+                    <option value="NS">NS</option>
+                    <option value="SRV">SRV</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>记录值</label>
+                <input type="text" id="recordValue" placeholder="如: 1.2.3.4 或 example.com" />
+            </div>
+            <div class="form-group">
+                <label>线路</label>
+                <select id="recordLine">
+                    <option value="default">默认</option>
+                    <option value="telecom">电信</option>
+                    <option value="unicom">联通</option>
+                    <option value="mobile">移动</option>
+                    <option value="overseas">海外</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>TTL</label>
+                <select id="recordTTL">
+                    <option value="60">60 秒</option>
+                    <option value="120">120 秒</option>
+                    <option value="300">5 分钟</option>
+                    <option value="600" selected>10 分钟</option>
+                    <option value="1800">30 分钟</option>
+                    <option value="3600">1 小时</option>
+                    <option value="86400">1 天</option>
+                </select>
+            </div>
+            <div class="form-group" id="priorityGroup" style="display:none;">
+                <label>优先级 (MX/SRV)</label>
+                <input type="number" id="recordPriority" placeholder="10" value="10" />
+            </div>
+            <div class="form-group">
+                <label>备注</label>
+                <input type="text" id="recordRemark" placeholder="可选备注" />
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeRecordModal()">取消</button>
+                <button class="btn btn-primary" id="recordSubmitBtn" onclick="submitRecord()">添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch TTL Modal -->
+    <div class="modal-overlay" id="batchTTLModal">
+        <div class="modal">
+            <h3>批量修改 TTL</h3>
+            <div class="form-group">
+                <label>新 TTL 值</label>
+                <select id="batchTTLValue">
+                    <option value="60">60 秒</option>
+                    <option value="120">120 秒</option>
+                    <option value="300">5 分钟</option>
+                    <option value="600" selected>10 分钟</option>
+                    <option value="1800">30 分钟</option>
+                    <option value="3600">1 小时</option>
+                    <option value="86400">1 天</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeBatchTTLModal()">取消</button>
+                <button class="btn btn-primary" onclick="executeBatchTTL()">确认修改</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch Line Modal -->
+    <div class="modal-overlay" id="batchLineModal">
+        <div class="modal">
+            <h3>批量修改线路</h3>
+            <div class="form-group">
+                <label>新线路</label>
+                <select id="batchLineValue">
+                    <option value="default">默认</option>
+                    <option value="telecom">电信</option>
+                    <option value="unicom">联通</option>
+                    <option value="mobile">移动</option>
+                    <option value="overseas">海外</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeBatchLineModal()">取消</button>
+                <button class="btn btn-primary" onclick="executeBatchLine()">确认修改</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // State
+        let authUsername = localStorage.getItem('dnsneko_username') || '';
+        let authApiKey = localStorage.getItem('dnsneko_apikey') || '';
+        let currentDomains = [];
+        let currentRecords = [];
+        let batchRecords = [];
+        let selectedBatchIds = new Set();
+        let domainPage = 1;
+        let domainPages = 1;
+        let recordPage = 1;
+        let recordPages = 1;
+        let editingRecordId = null;
+
+        // Init
+        document.getElementById('username').value = authUsername;
+        document.getElementById('apiKey').value = authApiKey;
+        updateAuthStatus();
+
+        // Auth
+        function saveAuth() {
+            authUsername = document.getElementById('username').value.trim();
+            authApiKey = document.getElementById('apiKey').value.trim();
+            if (!authUsername || !authApiKey) {
+                showToast('请填写用户名和 API Key', 'error');
+                return;
+            }
+            localStorage.setItem('dnsneko_username', authUsername);
+            localStorage.setItem('dnsneko_apikey', authApiKey);
+            updateAuthStatus();
+            showToast('认证信息已保存', 'success');
+            loadDomains();
+        }
+
+        function clearAuth() {
+            authUsername = '';
+            authApiKey = '';
+            localStorage.removeItem('dnsneko_username');
+            localStorage.removeItem('dnsneko_apikey');
+            document.getElementById('username').value = '';
+            document.getElementById('apiKey').value = '';
+            updateAuthStatus();
+            showToast('认证信息已清除', 'info');
+        }
+
+        function updateAuthStatus() {
+            const dot = document.getElementById('authDot');
+            const text = document.getElementById('authText');
+            if (authUsername && authApiKey) {
+                dot.classList.add('connected');
+                text.textContent = `已连接: ${authUsername}`;
+            } else {
+                dot.classList.remove('connected');
+                text.textContent = '未连接';
+            }
+        }
+
+        // API Helper
+        async function apiRequest(method, path, body = null) {
+            if (!authUsername || !authApiKey) {
+                showToast('请先配置 API 认证', 'error');
+                throw new Error('未认证');
+            }
+
+            const url = `https://www.dnsneko.com/api/v1/dns${path}`;
+            const headers = {
+                'X-DNSNEKO-USERNAME': authUsername,
+                'X-DNSNEKO-API-KEY': authApiKey,
+            };
+
+            if (body) {
+                headers['Content-Type'] = 'application/json';
+            }
+
+            const options = { method, headers };
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+
+            const response = await fetch(url, options);
+            const data = await response.json();
+
+            if (data.code !== 200) {
+                throw new Error(data.message || '请求失败');
+            }
+
+            return data;
+        }
+
+        // Tabs
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(`panel-${tab}`).classList.add('active');
+        }
+
+        // Domains
+        async function loadDomains() {
+            const container = document.getElementById('domainList');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p style="margin-top:8px;">加载中...</p></div>';
+
+            try {
+                const data = await apiRequest('GET', `/domains?page=${domainPage}&size=20`);
+                currentDomains = data.data.domains || [];
+                domainPages = parseInt(data.data.pages) || 1;
+                updateDomainSelects();
+                renderDomains();
+                renderDomainPagination();
+            } catch (e) {
+                container.innerHTML = `<div class="empty">加载失败: ${e.message}</div>`;
+            }
+        }
+
+        function renderDomains() {
+            const container = document.getElementById('domainList');
+            if (currentDomains.length === 0) {
+                container.innerHTML = '<div class="empty">暂无域名</div>';
+                return;
+            }
+
+            let html = `<div class="table-wrapper"><table>
+                <thead><tr>
+                    <th>域名</th>
+                    <th>状态</th>
+                    <th>过期时间</th>
+                    <th>记录数</th>
+                    <th>操作</th>
+                </tr></thead><tbody>`;
+
+            for (const d of currentDomains) {
+                const statusBadge = d.expired
+                    ? '<span class="badge badge-danger">已过期</span>'
+                    : d.status === 1
+                        ? '<span class="badge badge-success">正常</span>'
+                        : '<span class="badge badge-warning">未激活</span>';
+
+                html += `<tr>
+                    <td><strong>${d.domain}</strong></td>
+                    <td>${statusBadge}</td>
+                    <td>${d.expireTime || '-'}</td>
+                    <td>${d.recordCount || 0}</td>
+                    <td class="actions">
+                        <button class="btn btn-outline btn-sm" onclick="viewDomainDetail('${d.id}')">详情</button>
+                        <button class="btn btn-primary btn-sm" onclick="selectDomainForRecords('${d.id}', '${d.domain}')">管理记录</button>
+                    </td>
+                </tr>`;
+            }
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        function renderDomainPagination() {
+            const pag = document.getElementById('domainPagination');
+            if (domainPages <= 1) {
+                pag.style.display = 'none';
+                return;
+            }
+            pag.style.display = 'flex';
+            document.getElementById('domainPageInfo').textContent = `第 ${domainPage} / ${domainPages} 页`;
+        }
+
+        function changeDomainPage(delta) {
+            const newPage = domainPage + delta;
+            if (newPage < 1 || newPage > domainPages) return;
+            domainPage = newPage;
+            loadDomains();
+        }
+
+        async function viewDomainDetail(domainId) {
+            const card = document.getElementById('domainDetailCard');
+            const container = document.getElementById('domainDetail');
+            card.style.display = 'block';
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const data = await apiRequest('GET', `/domains/${domainId}`);
+                const d = data.data.domain;
+                container.innerHTML = `
+                    <table>
+                        <tr><td><strong>ID</strong></td><td>${d.id}</td></tr>
+                        <tr><td><strong>域名</strong></td><td>${d.domain}</td></tr>
+                        <tr><td><strong>根域名</strong></td><td>${d.rootDomain || '-'}</td></tr>
+                        <tr><td><strong>状态</strong></td><td>${d.status === 1 ? '正常' : '未激活'}</td></tr>
+                        <tr><td><strong>允许操作</strong></td><td>${d.allowOperation === 1 ? '是' : '否'}</td></tr>
+                        <tr><td><strong>创建时间</strong></td><td>${d.createTime || '-'}</td></tr>
+                        <tr><td><strong>过期时间</strong></td><td>${d.expireTime || '-'}</td></tr>
+                        <tr><td><strong>是否过期</strong></td><td>${d.expired ? '是' : '否'}</td></tr>
+                        <tr><td><strong>注册时长</strong></td><td>${d.registerDuration || '-'} 年</td></tr>
+                        <tr><td><strong>续期天数</strong></td><td>${d.renewDays || '-'} 天</td></tr>
+                        <tr><td><strong>备注</strong></td><td>${d.userRemark || d.notice || '-'}</td></tr>
+                    </table>`;
+            } catch (e) {
+                container.innerHTML = `<div class="empty">加载失败: ${e.message}</div>`;
+            }
+        }
+
+        function closeDomainDetail() {
+            document.getElementById('domainDetailCard').style.display = 'none';
+        }
+
+        function selectDomainForRecords(domainId, domainName) {
+            document.getElementById('recordDomainSelect').value = domainId;
+            switchTabDirect('records');
+            loadRecords();
+        }
+
+        function switchTabDirect(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => {
+                if (t.textContent.includes(tab === 'records' ? 'DNS 记录' : tab === 'domains' ? '域名' : '批量')) {
+                    t.classList.add('active');
+                }
+            });
+            document.getElementById(`panel-${tab}`).classList.add('active');
+        }
+
+        // Domain selects
+        function updateDomainSelects() {
+            const selects = ['recordDomainSelect', 'batchDomainSelect'];
+            for (const id of selects) {
+                const sel = document.getElementById(id);
+                const currentVal = sel.value;
+                sel.innerHTML = '<option value="">-- 请选择域名 --</option>';
+                for (const d of currentDomains) {
+                    sel.innerHTML += `<option value="${d.id}">${d.domain}</option>`;
+                }
+                if (currentVal) sel.value = currentVal;
+            }
+        }
+
+        // Records
+        function onRecordDomainChange() {
+            recordPage = 1;
+            loadRecords();
+        }
+
+        async function loadRecords() {
+            const domainId = document.getElementById('recordDomainSelect').value;
+            const container = document.getElementById('recordList');
+
+            if (!domainId) {
+                container.innerHTML = '<div class="empty">请先选择一个域名</div>';
+                document.getElementById('recordPagination').style.display = 'none';
+                return;
+            }
+
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p style="margin-top:8px;">加载中...</p></div>';
+
+            let params = `domainId=${domainId}&page=${recordPage}&size=20`;
+            const typeFilter = document.getElementById('recordTypeFilter').value;
+            const keyword = document.getElementById('recordKeyword').value.trim();
+            if (typeFilter) params += `&type=${typeFilter}`;
+            if (keyword) params += `&keyword=${keyword}`;
+
+            try {
+                const data = await apiRequest('GET', `/records?${params}`);
+                currentRecords = data.data.records || [];
+                recordPages = parseInt(data.data.pages) || 1;
+                renderRecords();
+                renderRecordPagination();
+            } catch (e) {
+                container.innerHTML = `<div class="empty">加载失败: ${e.message}</div>`;
+            }
+        }
+
+        function renderRecords() {
+            const container = document.getElementById('recordList');
+            if (currentRecords.length === 0) {
+                container.innerHTML = '<div class="empty">暂无记录</div>';
+                return;
+            }
+
+            let html = `<div class="table-wrapper"><table>
+                <thead><tr>
+                    <th>主机记录</th>
+                    <th>类型</th>
+                    <th>记录值</th>
+                    <th>线路</th>
+                    <th>TTL</th>
+                    <th>状态</th>
+                    <th>备注</th>
+                    <th>操作</th>
+                </tr></thead><tbody>`;
+
+            for (const r of currentRecords) {
+                const statusBadge = r.status === 1
+                    ? '<span class="badge badge-success">启用</span>'
+                    : '<span class="badge badge-warning">暂停</span>';
+
+                html += `<tr>
+                    <td><strong>${r.name}</strong></td>
+                    <td><span class="badge badge-info">${r.type}</span></td>
+                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${r.value}</td>
+                    <td>${r.line || 'default'}</td>
+                    <td>${r.ttl}</td>
+                    <td>${statusBadge}</td>
+                    <td>${r.remark || '-'}</td>
+                    <td class="actions">
+                        <button class="btn btn-outline btn-sm" onclick="editRecord('${r.id}')">编辑</button>
+                        <button class="btn btn-outline btn-sm" onclick="toggleRecordStatus('${r.id}', ${r.status})">${r.status === 1 ? '暂停' : '启用'}</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')">删除</button>
+                    </td>
+                </tr>`;
+            }
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        function renderRecordPagination() {
+            const pag = document.getElementById('recordPagination');
+            if (recordPages <= 1) {
+                pag.style.display = 'none';
+                return;
+            }
+            pag.style.display = 'flex';
+            document.getElementById('recordPageInfo').textContent = `第 ${recordPage} / ${recordPages} 页`;
+        }
+
+        function changeRecordPage(delta) {
+            const newPage = recordPage + delta;
+            if (newPage < 1 || newPage > recordPages) return;
+            recordPage = newPage;
+            loadRecords();
+        }
+
+        // Add Record
+        function showAddRecordModal() {
+            const domainId = document.getElementById('recordDomainSelect').value;
+            if (!domainId) {
+                showToast('请先选择一个域名', 'error');
+                return;
+            }
+            editingRecordId = null;
+            document.getElementById('recordModalTitle').textContent = '添加 DNS 记录';
+            document.getElementById('recordSubmitBtn').textContent = '添加';
+            document.getElementById('recordName').value = '';
+            document.getElementById('recordType').value = 'A';
+            document.getElementById('recordValue').value = '';
+            document.getElementById('recordLine').value = 'default';
+            document.getElementById('recordTTL').value = '600';
+            document.getElementById('recordPriority').value = '10';
+            document.getElementById('recordRemark').value = '';
+            updatePriorityVisibility();
+            document.getElementById('recordModal').classList.add('show');
+        }
+
+        function editRecord(recordId) {
+            const record = currentRecords.find(r => r.id === recordId);
+            if (!record) return;
+
+            editingRecordId = recordId;
+            document.getElementById('recordModalTitle').textContent = '编辑 DNS 记录';
+            document.getElementById('recordSubmitBtn').textContent = '保存';
+            document.getElementById('recordName').value = record.name || '';
+            document.getElementById('recordType').value = record.type || 'A';
+            document.getElementById('recordValue').value = record.value || '';
+            document.getElementById('recordLine').value = record.line || 'default';
+            document.getElementById('recordTTL').value = record.ttl || '600';
+            document.getElementById('recordPriority').value = record.priority || '10';
+            document.getElementById('recordRemark').value = record.remark || '';
+            updatePriorityVisibility();
+            document.getElementById('recordModal').classList.add('show');
+        }
+
+        function closeRecordModal() {
+            document.getElementById('recordModal').classList.remove('show');
+        }
+
+        document.getElementById('recordType').addEventListener('change', updatePriorityVisibility);
+
+        function updatePriorityVisibility() {
+            const type = document.getElementById('recordType').value;
+            document.getElementById('priorityGroup').style.display =
+                (type === 'MX' || type === 'SRV') ? 'flex' : 'none';
+        }
+
+        async function submitRecord() {
+            const domainId = document.getElementById('recordDomainSelect').value;
+            const type = document.getElementById('recordType').value;
+
+            const body = {
+                name: document.getElementById('recordName').value.trim(),
+                type: type,
+                value: document.getElementById('recordValue').value.trim(),
+                line: document.getElementById('recordLine').value,
+                ttl: parseInt(document.getElementById('recordTTL').value),
+                remark: document.getElementById('recordRemark').value.trim(),
+            };
+
+            if (type === 'MX' || type === 'SRV') {
+                body.priority = parseInt(document.getElementById('recordPriority').value);
+            }
+
+            if (!body.name || !body.value) {
+                showToast('请填写主机记录和记录值', 'error');
+                return;
+            }
+
+            try {
+                if (editingRecordId) {
+                    await apiRequest('PUT', `/records/${domainId}/${editingRecordId}`, body);
+                    showToast('记录修改成功', 'success');
+                } else {
+                    await apiRequest('POST', `/records/${domainId}`, body);
+                    showToast('记录添加成功', 'success');
+                }
+                closeRecordModal();
+                loadRecords();
+            } catch (e) {
+                showToast(`操作失败: ${e.message}`, 'error');
+            }
+        }
+
+        // Toggle status
+        async function toggleRecordStatus(recordId, currentStatus) {
+            const newStatus = currentStatus === 1 ? 0 : 1;
+            try {
+                await apiRequest('POST', `/records/${recordId}/status`, { status: newStatus });
+                showToast(newStatus === 1 ? '记录已启用' : '记录已暂停', 'success');
+                loadRecords();
+            } catch (e) {
+                showToast(`操作失败: ${e.message}`, 'error');
+            }
+        }
+
+        // Delete record
+        async function deleteRecord(recordId) {
+            if (!confirm('确定要删除该记录吗？')) return;
+            const domainId = document.getElementById('recordDomainSelect').value;
+            try {
+                await apiRequest('DELETE', `/records/${domainId}/${recordId}`);
+                showToast('记录已删除', 'success');
+                loadRecords();
+            } catch (e) {
+                showToast(`删除失败: ${e.message}`, 'error');
+            }
+        }
+
+        // Batch operations
+        function onBatchDomainChange() {
+            loadBatchRecords();
+        }
+
+        async function loadBatchRecords() {
+            const domainId = document.getElementById('batchDomainSelect').value;
+            const container = document.getElementById('batchRecordList');
+            selectedBatchIds.clear();
+            updateBatchBar();
+
+            if (!domainId) {
+                container.innerHTML = '<div class="empty">请先选择一个域名</div>';
+                return;
+            }
+
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const data = await apiRequest('GET', `/records?domainId=${domainId}&page=1&size=100`);
+                batchRecords = data.data.records || [];
+                renderBatchRecords();
+            } catch (e) {
+                container.innerHTML = `<div class="empty">加载失败: ${e.message}</div>`;
+            }
+        }
+
+        function renderBatchRecords() {
+            const container = document.getElementById('batchRecordList');
+            if (batchRecords.length === 0) {
+                container.innerHTML = '<div class="empty">暂无记录</div>';
+                return;
+            }
+
+            let html = `<div class="table-wrapper"><table>
+                <thead><tr>
+                    <th class="checkbox-cell"><input type="checkbox" onchange="toggleAllBatch(this)" /></th>
+                    <th>主机记录</th>
+                    <th>类型</th>
+                    <th>记录值</th>
+                    <th>线路</th>
+                    <th>TTL</th>
+                    <th>状态</th>
+                </tr></thead><tbody>`;
+
+            for (const r of batchRecords) {
+                const checked = selectedBatchIds.has(r.id) ? 'checked' : '';
+                const statusBadge = r.status === 1
+                    ? '<span class="badge badge-success">启用</span>'
+                    : '<span class="badge badge-warning">暂停</span>';
+
+                html += `<tr>
+                    <td class="checkbox-cell"><input type="checkbox" value="${r.id}" ${checked} onchange="toggleBatchItem(this)" /></td>
+                    <td><strong>${r.name}</strong></td>
+                    <td><span class="badge badge-info">${r.type}</span></td>
+                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${r.value}</td>
+                    <td>${r.line || 'default'}</td>
+                    <td>${r.ttl}</td>
+                    <td>${statusBadge}</td>
+                </tr>`;
+            }
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        function toggleAllBatch(el) {
+            if (el.checked) {
+                batchRecords.forEach(r => selectedBatchIds.add(r.id));
+            } else {
+                selectedBatchIds.clear();
+            }
+            renderBatchRecords();
+            updateBatchBar();
+        }
+
+        function toggleBatchItem(el) {
+            if (el.checked) {
+                selectedBatchIds.add(el.value);
+            } else {
+                selectedBatchIds.delete(el.value);
+            }
+            updateBatchBar();
+        }
+
+        function updateBatchBar() {
+            const bar = document.getElementById('batchBar');
+            const count = document.getElementById('batchCount');
+            if (selectedBatchIds.size > 0) {
+                bar.classList.add('show');
+                count.textContent = selectedBatchIds.size;
+            } else {
+                bar.classList.remove('show');
+            }
+        }
+
+        async function batchStatus(status) {
+            if (selectedBatchIds.size === 0) return;
+            const domainId = document.getElementById('batchDomainSelect').value;
+            try {
+                await apiRequest('POST', '/records/batch/status', {
+                    domainId: domainId,
+                    ids: Array.from(selectedBatchIds),
+                    status: status
+                });
+                showToast(`批量${status === 1 ? '启用' : '暂停'}成功`, 'success');
+                selectedBatchIds.clear();
+                updateBatchBar();
+                loadBatchRecords();
+            } catch (e) {
+                showToast(`操作失败: ${e.message}`, 'error');
+            }
+        }
+
+        async function batchDelete() {
+            if (selectedBatchIds.size === 0) return;
+            if (!confirm(`确定要删除选中的 ${selectedBatchIds.size} 条记录吗？`)) return;
+            const domainId = document.getElementById('batchDomainSelect').value;
+            try {
+                await apiRequest('POST', '/records/batch/delete', {
+                    domainId: domainId,
+                    ids: Array.from(selectedBatchIds)
+                });
+                showToast('批量删除成功', 'success');
+                selectedBatchIds.clear();
+                updateBatchBar();
+                loadBatchRecords();
+            } catch (e) {
+                showToast(`操作失败: ${e.message}`, 'error');
+            }
+        }
+
+        function showBatchTTLModal() {
+            if (selectedBatchIds.size === 0) return;
+            document.getElementById('batchTTLModal').classList.add('show');
+        }
+
+        function closeBatchTTLModal() {
+            document.getElementById('batchTTLModal').classList.remove('show');
+        }
+
+        async function executeBatchTTL() {
+            const domainId = document.getElementById('batchDomainSelect').value;
+            const ttl = parseInt(document.getElementById('batchTTLValue').value);
+            try {
+                await apiRequest('POST', '/records/batch/ttl', {
+                    domainId: domainId,
+                    ids: Array.from(selectedBatchIds),
+                    ttl: ttl
+                });
+                showToast('批量修改 TTL 成功', 'success');
+                closeBatchTTLModal();
+                selectedBatchIds.clear();
+                updateBatchBar();
+                loadBatchRecords();
+            } catch (e) {
+                showToast(`操作失败: ${e.message}`, 'error');
+            }
+        }
+
+        function showBatchLineModal() {
+            if (selectedBatchIds.size === 0) return;
+            document.getElementById('batchLineModal').classList.add('show');
+        }
+
+        function closeBatchLineModal() {
+            document.getElementById('batchLineModal').classList.remove('show');
+        }
+
+        async function executeBatchLine() {
+            const domainId = document.getElementById('batchDomainSelect').value;
+            const line = document.getElementById('batchLineValue').value;
+            try {
+                await apiRequest('POST', '/records/batch/line', {
+                    domainId: domainId,
+                    ids: Array.from(selectedBatchIds),
+                    line: line
+                });
+                showToast('批量修改线路成功', 'success');
+                closeBatchLineModal();
+                selectedBatchIds.clear();
+                updateBatchBar();
+                loadBatchRecords();
+            } catch (e) {
+                showToast(`操作失败: ${e.message}`, 'error');
+            }
+        }
+
+        // Toast
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3500);
+        }
+    </script>
+</body>
+</html>
