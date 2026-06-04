@@ -790,14 +790,16 @@
             }
         }
 
-        // API Helper
+        // API Helper (通过 Cloudflare Worker 代理解决 CORS)
+        const API_PROXY = 'https://dnsneko-proxy.liw.workers.dev/proxy';
+
         async function apiRequest(method, path, body = null) {
             if (!authUsername || !authApiKey) {
                 showToast('请先配置 API 认证', 'error');
                 throw new Error('未认证');
             }
 
-            const url = `https://www.dnsneko.com/api/v1/dns${path}`;
+            const url = `${API_PROXY}${path}`;
             const headers = {
                 'X-DNSNEKO-USERNAME': authUsername,
                 'X-DNSNEKO-API-KEY': authApiKey,
